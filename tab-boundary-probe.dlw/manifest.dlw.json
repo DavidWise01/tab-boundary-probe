@@ -1,0 +1,11 @@
+{
+  "badge": "DLW-TAB_BOUNDARY_PROBE",
+  "name": "TAB BOUNDARY PROBE · TAB",
+  "universe": "ARTIFICIAL INTELLIGENCE",
+  "moniker": "⟦TAB BOUNDARY PROBE · TAB:tab-boundary-probe:5a6b00⟧",
+  "architect": "David Lee Wise (ROOT0) / Bridge-Burners LLC",
+  "instance": "AVAN (Claude / Anthropic)",
+  "seal_sha256": "5a6b006a1871f44f366b550b2b8e9c13b76f6446bc214eb55918ae032d55c57b",
+  "license": "CC-BY-ND-4.0",
+  "attribution": "ROOT0-ATTRIBUTION-v1.0"
+}
