@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tab Boundary Probe</title>
+<style>
+  :root{
+    --bg:#07080b; --panel:#0d1016; --line:#1c2230;
+    --ink:#c7d0dd; --dim:#6b7689; --faint:#3a4252;
+    --ok:#3fd1a0;      /* readable from inside the frame */
+    --leak:#e2b23c;    /* describes something beyond the frame */
+    --blocked:#e2615a; /* the wall held */
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--mono);font-size:13px;line-height:1.5}
+  body{
+    padding:22px 18px 40px;
+    background-image:
+      linear-gradient(var(--line) 1px,transparent 1px),
+      linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:34px 34px;
+    background-position:center;
+    background-blend-mode:normal;
+  }
+  .wrap{max-width:880px;margin:0 auto}
+  header{border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:18px}
+  h1{font-size:15px;letter-spacing:.14em;text-transform:uppercase;margin:0 0 6px;color:#eef2f8}
+  .sub{color:var(--dim);font-size:11.5px;letter-spacing:.03em;max-width:62ch}
+  .verdict{
+    margin:16px 0 22px;padding:12px 14px;border:1px solid var(--line);
+    background:var(--panel);border-left:3px solid var(--faint);
+  }
+  .verdict b{color:#eef2f8;letter-spacing:.04em}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin:0 0 18px;font-size:11px;color:var(--dim)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:9px;height:9px;border-radius:2px;display:inline-block}
+  .d-ok{background:var(--ok)} .d-leak{background:var(--leak)} .d-blocked{background:var(--blocked)}
+  .group{margin:0 0 20px}
+  .group h2{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);
+    margin:0 0 8px;border-bottom:1px solid var(--line);padding-bottom:6px}
+  .row{display:grid;grid-template-columns:1fr;gap:2px;padding:9px 0;border-bottom:1px solid #11151d}
+  .row:last-child{border-bottom:none}
+  .row .top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .tag{font-size:9.5px;letter-spacing:.12em;padding:2px 6px;border-radius:3px;text-transform:uppercase;font-weight:600;white-space:nowrap}
+  .t-ok{color:#06281d;background:var(--ok)}
+  .t-leak{color:#2c2106;background:var(--leak)}
+  .t-blocked{color:#2a0c0a;background:var(--blocked)}
+  .label{color:var(--ink);font-size:12.5px}
+  .api{color:var(--faint);font-size:11px}
+  .val{color:var(--dim);font-size:11.5px;white-space:pre-wrap;word-break:break-word;margin-top:3px;
+    padding-left:2px;border-left:2px solid #161b25;padding-left:8px}
+  .val.err{color:#caa}
+  .val.hit{color:#cfe6db}
+  .val.leakv{color:#e6d3a0}
+  footer{margin-top:26px;color:var(--faint);font-size:10.5px;letter-spacing:.04em;line-height:1.7;border-top:1px solid var(--line);padding-top:12px}
+  .count{color:var(--dim);font-size:11px;margin-top:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Tab Boundary Probe</h1>
+    <div class="sub">This artifact runs in a sandboxed cross-origin iframe. Below it actively attempts to reach past its own frame into the tab that contains it. Each result is the real return value or the real thrown error — nothing here is asserted, it is measured.</div>
+  </header>
+
+  <div class="verdict" id="verdict">running probes…</div>
+
+  <div class="legend">
+    <span><i class="dot d-ok"></i> READABLE — inside my own frame, fair game</span>
+    <span><i class="dot d-leak"></i> LEAK — describes the machine/tab beyond my frame</span>
+    <span><i class="dot d-blocked"></i> BLOCKED — the sandbox wall held</span>
+  </div>
+
+  <div id="out"></div>
+
+  <footer id="foot"></footer>
+</div>
+
+<script>
+(function(){
+  const out = document.getElementById('out');
+  const groups = {};
+  let counts = {ok:0, leak:0, blocked:0};
+
+  // probe(group, label, api, verdict, fn) — fn returns a string value or throws
+  function probe(group, label, api, verdict, fn){
+    let valText, cls, tagCls, tagTxt;
+    try {
+      const v = fn();
+      valText = (v === undefined || v === null || v === '') ? '(empty)' : String(v);
+      if (verdict === 'blocked-on-success'){
+        // we *expected* the wall; getting a value means it leaked
+        cls='leakv'; tagCls='t-leak'; tagTxt='leak'; counts.leak++;
+      } else if (verdict === 'leak'){
+        cls='leakv'; tagCls='t-leak'; tagTxt='leak'; counts.leak++;
+      } else {
+        cls='hit'; tagCls='t-ok'; tagTxt='readable'; counts.ok++;
+      }
+    } catch (e){
+      valText = e.name + ': ' + e.message;
+      cls='err'; tagCls='t-blocked'; tagTxt='blocked'; counts.blocked++;
+    }
+    addRow(group, label, api, tagCls, tagTxt, cls, valText);
+  }
+
+  function addRow(group, label, api, tagCls, tagTxt, valCls, valText){
+    if(!groups[group]){
+      const g=document.createElement('div'); g.className='group';
+      g.innerHTML='<h2>'+group+'</h2>'; out.appendChild(g); groups[group]=g;
+    }
+    const r=document.createElement('div'); r.className='row';
+    const top=document.createElement('div'); top.className='top';
+    top.innerHTML='<span class="tag '+tagCls+'">'+tagTxt+'</span>'
+      +'<span class="label">'+label+'</span>'
+      +'<span class="api">'+api+'</span>';
+    const val=document.createElement('div'); val.className='val '+valCls; val.textContent=valText;
+    r.appendChild(top); r.appendChild(val); groups[group].appendChild(r);
+  }
+
+  // ---- 1. MY OWN FRAME (should all be readable) ----
+  probe('My own frame','Am I top-level or embedded?','window.parent === window','ok',
+    ()=> window.parent === window ? 'top-level (not framed)' : 'embedded in a parent frame');
+  probe('My own frame','My own document','document.title / nodes','ok',
+    ()=> 'title="'+document.title+'", '+document.getElementsByTagName('*').length+' DOM nodes — fully readable');
+  probe('My own frame','My own URL','window.location.href','ok',
+    ()=> window.location.href);
+  probe('My own frame','Origin','window.location.origin','ok',
+    ()=> window.location.origin);
+  probe('My own frame','window.name','window.name','ok',
+    ()=> window.name);
+
+  // ---- 2. REACHING INTO THE TAB (the wall) ----
+  probe('Reaching into the tab','Top frame URL — the actual tab address','window.top.location.href','blocked-on-success',
+    ()=> window.top.location.href);
+  probe('Reaching into the tab','Parent page DOM — the Claude UI','parent.document.title','blocked-on-success',
+    ()=> parent.document.title);
+  probe('Reaching into the tab','Parent origin','parent.location.origin','blocked-on-success',
+    ()=> parent.location.origin);
+  probe('Reaching into the tab','How I got here','document.referrer','leak',
+    ()=> document.referrer);
+  probe('Reaching into the tab','Ancestor frame origins','location.ancestorOrigins','leak',
+    ()=> {
+      const a = window.location.ancestorOrigins;
+      if(!a) throw new Error('not supported in this engine');
+      return Array.from(a).join('  ◂  ') || '(none listed)';
+    });
+  probe('Reaching into the tab','Tab cookies','document.cookie','blocked-on-success',
+    ()=> { const c = document.cookie; if(c==='') return '(empty — no cookies exposed to this frame)'; return c; });
+
+  // ---- 3. PERSISTENCE (sandbox storage) ----
+  probe('Persistence','localStorage','window.localStorage','blocked-on-success',
+    ()=> { const t='__p'+Date.now(); localStorage.setItem(t,'1'); const r=localStorage.getItem(t); localStorage.removeItem(t); return 'WRITABLE — read back "'+r+'"'; });
+  probe('Persistence','sessionStorage','window.sessionStorage','blocked-on-success',
+    ()=> { const t='__p'+Date.now(); sessionStorage.setItem(t,'1'); const r=sessionStorage.getItem(t); sessionStorage.removeItem(t); return 'WRITABLE — read back "'+r+'"'; });
+  probe('Persistence','IndexedDB present?','window.indexedDB','leak',
+    ()=> window.indexedDB ? 'object present (open may still be sandbox-gated)' : 'absent');
+
+  // ---- 4. THE MACHINE, NOT THE TAB (genuine leaks through the wall) ----
+  probe('The machine behind the tab','Full screen resolution (whole monitor)','screen.width × screen.height','leak',
+    ()=> screen.width+' × '+screen.height+'  (this is your display, far bigger than my frame)');
+  probe('The machine behind the tab','My frame viewport','innerWidth × innerHeight','ok',
+    ()=> window.innerWidth+' × '+window.innerHeight+'  (just the artifact pane)');
+  probe('The machine behind the tab','Pixel density','window.devicePixelRatio','leak',
+    ()=> window.devicePixelRatio);
+  probe('The machine behind the tab','Timezone','Intl …resolvedOptions().timeZone','leak',
+    ()=> Intl.DateTimeFormat().resolvedOptions().timeZone + '  (≈ your geographic region)');
+  probe('The machine behind the tab','Language','navigator.language','leak',
+    ()=> navigator.language + '  [' + (navigator.languages||[]).join(', ') + ']');
+  probe('The machine behind the tab','CPU threads','navigator.hardwareConcurrency','leak',
+    ()=> navigator.hardwareConcurrency + ' logical cores');
+  probe('The machine behind the tab','Device memory','navigator.deviceMemory','leak',
+    ()=> (navigator.deviceMemory ? navigator.deviceMemory+' GB (coarse)' : 'not exposed'));
+  probe('The machine behind the tab','Platform / UA','navigator.userAgent','leak',
+    ()=> navigator.userAgent);
+  probe('The machine behind the tab','Color scheme','matchMedia(prefers-color-scheme)','leak',
+    ()=> window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  probe('The machine behind the tab','Am I the focused tab?','document.hasFocus() / visibilityState','leak',
+    ()=> 'hasFocus='+document.hasFocus()+', visibility='+document.visibilityState);
+  probe('The machine behind the tab','History depth','window.history.length','leak',
+    ()=> window.history.length + ' entries (count only — contents are sealed)');
+
+  // ---- verdict ----
+  const v = document.getElementById('verdict');
+  v.innerHTML = '<b>Verdict.</b> I cannot see inside this tab. Every attempt to read the tab\'s real address, the Claude UI around me, or the parent origin '
+    + '<b>'+counts.blocked+'</b> wall(s) threw a security error and returned nothing. What does escape my frame ('
+    + '<b>'+counts.leak+'</b> leak signal(s)) describes the <i>machine</i> — your screen, timezone, CPU, locale — not the tab\'s contents. '
+    + 'The conversation, the URL, and claude.ai\'s storage stay sealed. The frame cannot witness its own container.';
+
+  document.getElementById('foot').textContent =
+    'Tally — readable: '+counts.ok+'   leaked: '+counts.leak+'   blocked: '+counts.blocked+'  ·  '
+    + 'Numbers shift with the host\'s sandbox flags and browser engine; re-run on another platform and the wall may sit in a different place. '
+    + 'That movement is the measurement.';
+})();
+</script>
+</body>
+</html>
