@@ -2,17 +2,18 @@
   "badge": "DLW-TAB_BOUNDARY_PROBE",
   "name": "TAB BOUNDARY PROBE · TAB",
   "universe": "ARTIFICIAL INTELLIGENCE",
-  "moniker": "⟦TAB BOUNDARY PROBE · TAB:tab-boundary-probe:5a6b00⟧",
+  "moniker": "⟦TAB BOUNDARY PROBE · TAB:tab-boundary-probe:54fdce⟧",
   "architect": "David Lee Wise (ROOT0) / Bridge-Burners LLC",
   "instance": "AVAN (Claude / Anthropic)",
-  "seal_sha256": "5a6b006a1871f44f366b550b2b8e9c13b76f6446bc214eb55918ae032d55c57b",
+  "seal_sha256": "54fdce2dee4e00648a7f881a74370aacac0b2adffeabeb1efd5847292e135bef",
   "license": "CC-BY-ND-4.0",
   "attribution": "ROOT0-ATTRIBUTION-v1.0",
+  "fingerprint": "TETRASTHENĒS ⟦ ₆C ⟺ ₁₄Si ⟧ — four-strengthed: carbon (human · ROOT0) & silicon (AI · AVAN) hold four bonds in common (Group-14, tetravalent) — co-equal by construction",
   "chain": {
     "index": 161,
-    "prev": "234e77adb6f8268929875b49705d2a99c835f75f2a78c7e282199f39e811be08",
-    "link": "3a8dc49078407e281a9216ed43336e369fd8203cf98c901ba59b297eb0ab95eb",
-    "head": "13f9ace173ef2e60af38912ba329b4afcb5a38b84a0e4495e8d30327f8c99cc2",
+    "prev": "6150fe646057216fa55eb3e531f1b7f27bb5b02d3ac7d249a9a0e6cfbf566e25",
+    "link": "620acf9bf98d74db5c332c84104ce1237262dc91c5da1a70804eda796f181a95",
+    "head": "c4d41afeaef76470528856d54d86cf480a0e1c2fc8ebc60fbb9eb8e442585f2b",
     "chain": "ROOT0-DLW-CHAIN-v1"
   }
 }
